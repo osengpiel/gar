@@ -26,3 +26,15 @@
 *.exe
 *.out
 *.app
+
+# Unit Testing
+testing
+
+# Doxygen
+Doxyfile*
+html
+doc
+latex
+
+# temporary and swap
+*.swp
