@@ -30,6 +30,8 @@
 #include <algorithm>
 #include <random>
 
+#include <iostream>
+
 namespace gar
 {
 
@@ -123,6 +125,11 @@ Circle<T> getCircleFromThreePoints(std::pair<T, T> first,
     double m_b =
         double(third.second - second.second) / (third.first - second.first);
 
+    if(m_a == m_b)
+    {
+	return Circle<T>{std::make_pair(0,0), 0};
+    }
+
     double center_x = (m_a * m_b * (third.second - first.second) +
                        m_a * (second.first + third.first) -
                        m_b * (first.first + second.first)) /
@@ -163,35 +170,43 @@ Circle<T> getCircleFromLineSegment(std::vector<std::pair<T, T>> & points)
 
     auto result = Circle<T>{};
 
-    if (points.size() < 5)
+    if (points.size() < 9)
     {
         return result;
     }
 
-    std::random_device device;
-    auto generator = std::mt19937(device());
+    std::cout << points.size() << std::endl;
 
-    for (int i = 0; i < points.size() / 2; ++i)
+    std::sort(points.begin(), points.end(), [](Pair left, Pair right)
+              {
+                  return left.second < right.second;
+              });
+
+    auto first = points.begin();
+    auto second = first+4;
+    auto third = second+4;
+
+    auto counter = 0;
+    for (; third != points.end(); ++first, ++second, ++third )
     {
-        std::shuffle(points.begin(), points.end(), generator);
-        std::vector<Pair> selection{points[0], points[1], points[2]};
+        auto currentCircle = getCircleFromThreePoints(*first, *second, *third);
 
-        std::sort(selection.begin(), selection.end(), [](Pair left, Pair right)
-                  {
-                      return left.second < right.second;
-                  });
+	if(currentCircle.radius > 0)
+	{
+	    result.position.first += currentCircle.position.first;
+	    result.position.second += currentCircle.position.second;
+	    result.radius += currentCircle.radius;
 
-        auto currentCircle =
-            getCircleFromThreePoints(selection[0], selection[1], selection[2]);
-
-        result.position.first += currentCircle.position.first;
-        result.position.second += currentCircle.position.second;
-        result.radius += currentCircle.radius;
+	    ++counter;
+	}
     }
 
-    result.position.first /= (points.size() / 2);
-    result.position.second /= (points.size() / 2);
-    result.radius /= (points.size() / 2);
+    if(counter != 0)
+    {
+        result.position.first /= counter;
+        result.position.second /= counter;
+        result.radius /= counter;
+    }
 
     return result;
 }
