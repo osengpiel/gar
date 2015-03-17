@@ -18,6 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+/**
+ * @file Analyze.hpp
+ * @brief Functions to analyze image data.
+ */
+
 #ifndef GAR_ANALYZE_HPP
 #define GAR_ANALYZE_HPP
 
@@ -28,7 +33,7 @@ namespace gar
 {
 
 /**
- * @brief Finds horizontal edges to sequences of the given value
+ * @brief Finds horizontal edges to sequences of the given value.
  *
  * Scans a given range of elements and returns the positions of the edges to
  * contiguous sequences of the value.
@@ -49,15 +54,15 @@ _OutputIterator findEdges(_InputIterator first, _InputIterator last,
         return result;
     }
 
-    auto current = first;
-    while (++current != last - 1)
+    auto current = first + 1;
+    for (; current != last - 1; ++current)
     {
         if (((*(current - 1) & value) ^ (*(current + 1) & value)) &&
             (*current & value))
         {
             *result = std::distance(first, current);
+            ++result;
         }
-        ++result;
     }
 
     return result;
@@ -132,7 +137,6 @@ Circle<T> getCircleFromThreePoints(std::pair<T, T> first,
  *
  * @return Iterator that points just beyond the values written to the result
  */
-
 template <typename _InputIterator, typename _OutputIterator, typename _UnaryOp>
 _OutputIterator clusterLineSegments(_InputIterator first, _InputIterator last,
                                     _OutputIterator result,
@@ -146,31 +150,33 @@ _OutputIterator clusterLineSegments(_InputIterator first, _InputIterator last,
     auto marked = std::vector<typename _InputIterator::value_type>{};
     auto stack = std::vector<typename _InputIterator::value_type>{};
 
-    while (first != last)
+    for (;first != last; ++first)
     {
-        if (std::find(marked.begin(), marked.end(), *first) == marked.end())
+        if (std::none_of(marked.begin(), marked.end(), 
+		    [&](decltype(*first) other) { return other == *first; }))
         {
             stack.push_back(*first);
 
             auto cluster = std::vector<typename _InputIterator::value_type>{};
 
+	    // DFS for distict lines
             while (!stack.empty())
             {
-
                 auto current = stack.back();
                 stack.pop_back();
                 marked.push_back(current);
 
                 auto neighbors = neighborFunction(current);
 
-                if (neighbors.size() <= 2)
+                if (neighbors.size() <= 2) // A line segment has 2 neighbors
                 {
                     cluster.push_back(current);
 
                     for (auto neighbor : neighbors)
                     {
-                        if (std::find(marked.begin(), marked.end(), neighbor) ==
-                            marked.end())
+                        if (std::none_of(marked.begin(), marked.end(),
+                                         [&](decltype(neighbor) other)
+                                         { return other == neighbor; }))
                         {
                             stack.push_back(neighbor);
                         }
@@ -182,7 +188,6 @@ _OutputIterator clusterLineSegments(_InputIterator first, _InputIterator last,
                 *(result++) = cluster;
             }
         }
-        ++first;
     }
 
     return result;
