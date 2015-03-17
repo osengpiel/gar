@@ -28,6 +28,7 @@
 
 #include <iterator>
 #include <algorithm>
+#include <random>
 
 namespace gar
 {
@@ -63,6 +64,31 @@ _OutputIterator findEdges(_InputIterator first, _InputIterator last,
             *result = std::distance(first, current);
             ++result;
         }
+    }
+
+    return result;
+}
+
+template <typename _InputIterator, typename _OutputIterator, typename T>
+_OutputIterator findEdgesInImage(_InputIterator first, _InputIterator last,
+                          _OutputIterator result,int line_size, T value)
+{
+    assert(std::distance(first,last) % line_size == 0);
+
+    if(first == last)
+    {
+	return result;
+    }
+
+    int currentLine = 0;
+    for(; first != last; first += line_size, ++currentLine)
+    {
+	auto pointsOnLine = std::vector<int>{};
+	findEdges(first, first+line_size, std::back_inserter(pointsOnLine), value);
+	for(auto point : pointsOnLine)
+	{
+	    *(result++) = std::make_pair(point,currentLine);
+	}
     }
 
     return result;
@@ -121,6 +147,53 @@ Circle<T> getCircleFromThreePoints(std::pair<T, T> first,
         sqrt(pow(first.first - center_x, 2) + pow(first.second - center_y, 2));
 
     return Circle<T>{std::make_pair(T(center_x), T(center_y)), T(radius)};
+}
+
+template <typename T>
+int _pointDistance(std::pair<T,T> left, std::pair<T,T> right)
+{
+    return sqrt(pow(left.first - right.first, 2) +
+                pow(left.second - right.second, 2));
+}
+
+template <typename T>
+Circle<T> getCircleFromLineSegment(std::vector<std::pair<T, T>> & points)
+{
+    using Pair = std::pair<T, T>;
+
+    auto result = Circle<T>{};
+
+    if (points.size() < 5)
+    {
+        return result;
+    }
+
+    std::random_device device;
+    auto generator = std::mt19937(device());
+
+    for (int i = 0; i < points.size() / 2; ++i)
+    {
+        std::shuffle(points.begin(), points.end(), generator);
+        std::vector<Pair> selection{points[0], points[1], points[2]};
+
+        std::sort(selection.begin(), selection.end(), [](Pair left, Pair right)
+                  {
+                      return left.second < right.second;
+                  });
+
+        auto currentCircle =
+            getCircleFromThreePoints(selection[0], selection[1], selection[2]);
+
+        result.position.first += currentCircle.position.first;
+        result.position.second += currentCircle.position.second;
+        result.radius += currentCircle.radius;
+    }
+
+    result.position.first /= (points.size() / 2);
+    result.position.second /= (points.size() / 2);
+    result.radius /= (points.size() / 2);
+
+    return result;
 }
 
 /**
