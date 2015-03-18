@@ -29,6 +29,7 @@
 #include <iterator>
 #include <algorithm>
 #include <random>
+#include <cmath>
 
 #include <iostream>
 
@@ -116,44 +117,45 @@ template <typename T> struct Circle
  * @return A struct which holds the position and the radius
  */
 template <typename T>
-Circle<T> getCircleFromThreePoints(std::pair<T, T> first,
-                                   std::pair<T, T> second,
-                                   std::pair<T, T> third)
+Circle<T> getCircleFromThreePoints(std::pair<T, T> one,
+                                   std::pair<T, T> two,
+                                   std::pair<T, T> three)
 {
-    double m_a =
-        double(second.second - first.second) / (second.first - first.first);
-    double m_b =
-        double(third.second - second.second) / (third.first - second.first);
+    assert(one != two);
+    assert(one != three);
+    assert(two != three);
 
-    if(m_a == m_b)
+    auto m_a = double(two.second - one.second) / (two.first - one.first);
+    auto m_b = double(three.second - two.second) / (three.first - two.first);
+
+    auto result = Circle<T>{std::make_pair(0, 0), 0};
+
+    if (m_a != m_b && (std::isfinite(m_a) && std::isfinite(m_b)))
     {
-	return Circle<T>{std::make_pair(0,0), 0};
+        result.position.first =
+            (m_a * m_b * (three.second - one.second) +
+             m_a * (two.first + three.first) - m_b * (one.first + two.first)) /
+            (2 * (m_a - m_b));
+
+        if (m_a != 0.0)
+        {
+            result.position.second =
+                ((double(one.second + two.second) / 2) -
+                 (result.position.first - double(one.first + two.first) / 2) /
+                     m_a);
+        }
+        else if (m_b != 0.0)
+        {
+            result.position.second =
+                ((double(two.second + three.second) / 2) -
+                 (result.position.first - double(two.first + three.first) / 2) /
+                     m_b);
+        }
+        result.radius = sqrt(pow(one.first - result.position.first, 2) +
+                             pow(one.second - result.position.second, 2));
     }
 
-    double center_x = (m_a * m_b * (third.second - first.second) +
-                       m_a * (second.first + third.first) -
-                       m_b * (first.first + second.first)) /
-                      (2 * (m_a - m_b));
-    double center_y;
-    if (m_a != 0)
-    {
-        center_y = ((double(first.second + second.second) / 2) -
-                    (center_x - double(first.first + second.first) / 2) / m_a);
-    }
-    else if (m_b != 0)
-    {
-        center_y = ((double(second.second + third.second) / 2) -
-                    (center_x - double(second.first + third.first) / 2) / m_b);
-    }
-    else
-    {
-        return Circle<T>{std::make_pair(0, 0), 0};
-    }
-
-    double radius =
-        sqrt(pow(first.first - center_x, 2) + pow(first.second - center_y, 2));
-
-    return Circle<T>{std::make_pair(T(center_x), T(center_y)), T(radius)};
+    return result;
 }
 
 template <typename T>
@@ -170,21 +172,21 @@ Circle<T> getCircleFromLineSegment(std::vector<std::pair<T, T>> & points)
 
     auto result = Circle<T>{};
 
-    if (points.size() < 9)
+    if (points.size() < 8)
     {
         return result;
     }
-
-    std::cout << points.size() << std::endl;
 
     std::sort(points.begin(), points.end(), [](Pair left, Pair right)
               {
                   return left.second < right.second;
               });
 
+    auto pointDistance = (points.size()-4)/4;
+
     auto first = points.begin();
-    auto second = first+4;
-    auto third = second+4;
+    auto second = first + pointDistance;
+    auto third = second + pointDistance;
 
     auto counter = 0;
     for (; third != points.end(); ++first, ++second, ++third )
